@@ -13,6 +13,7 @@ class UserDTO
     #[Assert\Email(message: "The email '{{ value }}' is not a valid email address.")]
     public ?string $email;
 
+    #[Assert\NotBlank(message: "Please enter a name.")]
     #[Assert\Length(min: 2, max: 255, minMessage: "The name must be at least {{ limit }} characters long", maxMessage: "The name cannot be longer than {{ limit }} characters")]
     #[Assert\Regex(pattern: '/^[\w -]+$/', message: "The name can only contain letters, numbers, dashes and underscores.")]
     public ?string $name;

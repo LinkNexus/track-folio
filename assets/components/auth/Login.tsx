@@ -4,8 +4,10 @@ import * as React from "react";
 import {useActionState} from "react";
 import {LoaderButton} from "@/components/utils/LoaderButton";
 import {toast} from "sonner";
+import {useStore} from "@/store";
 
 export const LoginForm = () => {
+    const setUser = useStore(state => state.setUser);
     const action = async (_: Awaited<void | undefined>, formData: FormData) => {
         const res = await fetch("/api/login", {
             method: "POST",
@@ -21,7 +23,7 @@ export const LoginForm = () => {
             return;
         }
 
-        console.log(await res.json());
+        setUser(await res.json());
     }
 
     const [_, login, pending] = useActionState(action, undefined);

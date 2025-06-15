@@ -28,31 +28,31 @@ final class SecurityController extends AbstractController
         EventDispatcherInterface     $eventDispatcher
     ): JsonResponse|Response|null
     {
-        $user = new User();
-        $user->setEmail($userDTO->email);
-        $user->setName($userDTO->name);
-        $user->setPassword(
-            $userPasswordHasher->hashPassword($user, $user->getPassword())
-        );
-
-        try {
-            $entityManager->persist($user);
-            $entityManager->flush();
-
-            $user = $entityManager->getRepository(User::class)->findOneBy(['email' => $user->getEmail()]);
-            $eventDispatcher->dispatch(new UserCreatedEvent($user));
-
-            return $security->login($user, "json_login", "login");
-        } catch (\Doctrine\DBAL\Exception $e) {
+        if ($entityManager->getRepository(User::class)->findOneBy(['email' => $userDTO->email])) {
             return $this->json([
                 "violations" => [
                     [
                         "propertyPath" => "email",
-                        "title" => "The email {$user->getEmail()} is already in use by another account."
+                        "title" => "The email {$userDTO->email} is already in use by another account."
                     ]
                 ]
             ], Response::HTTP_BAD_REQUEST);
         }
+
+        $user = new User();
+        $user->setEmail($userDTO->email);
+        $user->setName($userDTO->name);
+        $user->setPassword(
+            $userPasswordHasher->hashPassword($user, $userDTO->password)
+        );
+
+        $entityManager->persist($user);
+        $entityManager->flush();
+
+        $user = $entityManager->getRepository(User::class)->findOneBy(['email' => $user->getEmail()]);
+        $eventDispatcher->dispatch(new UserCreatedEvent($user));
+
+        return $security->login($user, "json_login", "login");
     }
 
     #[Route("/login", name: "login", methods: ["POST"])]

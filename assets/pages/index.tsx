@@ -6,8 +6,18 @@ import AssetDistribution from '@/components/AssetDistribution';
 import DocumentVerification from '@/components/DocumentVerification';
 import TransactionHistory from '@/components/TransactionHistory';
 import ProfileSettings from '@/components/ProfileSettings';
+import {useStore} from "@/store";
+import {Navigate} from "react-router-dom";
 
 const Index = () => {
+    const user = useStore(state => state.user);
+
+    if (!user) {
+        return (
+            <Navigate to={"/auth"} replace={true}/>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-slate-50">
             <Header/>

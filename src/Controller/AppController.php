@@ -8,7 +8,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class AppController extends AbstractController
 {
-    #[Route('/{req}', name: 'catch_all', requirements: ['req' => '.*'], priority: -5)]
+    #[Route('/{req}', name: 'catch_all', requirements: ['req' => '.*'], priority: -10)]
     public function index(): Response
     {
         return $this->render("index.html.twig");

@@ -2,14 +2,13 @@
 
 namespace App\Entity;
 
-use ApiPlatform\Metadata\ApiResource;
 use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Lexik\Bundle\JWTAuthenticationBundle\Security\User\JWTUserInterface;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Validator\Constraints as Assert;
 
-#[ApiResource]
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 class User implements UserInterface, PasswordAuthenticatedUserInterface, JWTUserInterface
@@ -20,6 +19,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, JWTUser
     private ?int $id = null;
 
     #[ORM\Column(length: 180)]
+    #[Assert\NotBlank(message: "Please enter an email address.")]
+    #[Assert\Email(message: "The email '{{ value }}' is not a valid email address.")]
     private ?string $email = null;
 
     /**
@@ -32,10 +33,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, JWTUser
      * @var string The hashed password
      */
     #[ORM\Column]
+    #[Assert\NotCompromisedPassword]
+    #[Assert\PasswordStrength]
     private ?string $password = null;
 
     #[ORM\Column]
     private ?bool $isVerified = null;
+
+    #[ORM\Column(length: 255)]
+    #[Assert\Length(min: 2, max: 255, minMessage: "The name must be at least {{ limit }} characters long", maxMessage: "The name cannot be longer than {{ limit }} characters")]
+    #[Assert\Regex(pattern: '/^[\w -]+$/', message: "The name can only contain letters, numbers, dashes and underscores.")]
+    private ?string $name = null;
 
     public static function createFromPayload($username, array $payload): User|JWTUserInterface
     {
@@ -125,6 +133,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, JWTUser
     public function setIsVerified(bool $isVerified): static
     {
         $this->isVerified = $isVerified;
+
+        return $this;
+    }
+
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    public function setName(string $name): static
+    {
+        $this->name = $name;
 
         return $this;
     }

@@ -2,14 +2,16 @@
 
 namespace App\Controller;
 
+use App\DTO\UserDTO;
 use App\Entity\User;
-use App\Security\EmailVerifier;
+use App\Event\UserCreatedEvent;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\Mime\Address;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -19,13 +21,16 @@ final class SecurityController extends AbstractController
 
     #[Route("/register", name: "register", methods: ["POST"])]
     public function register(
-        #[MapRequestPayload] User   $user,
-        Security                    $security,
-        EntityManagerInterface      $entityManager,
-        UserPasswordHasherInterface $userPasswordHasher,
-        EmailVerifier               $emailVerifier
-    )
+        #[MapRequestPayload] UserDTO $userDTO,
+        Security                     $security,
+        EntityManagerInterface       $entityManager,
+        UserPasswordHasherInterface  $userPasswordHasher,
+        EventDispatcherInterface     $eventDispatcher
+    ): JsonResponse|Response|null
     {
+        $user = new User();
+        $user->setEmail($userDTO->email);
+        $user->setName($userDTO->name);
         $user->setPassword(
             $userPasswordHasher->hashPassword($user, $user->getPassword())
         );
@@ -35,23 +40,24 @@ final class SecurityController extends AbstractController
             $entityManager->flush();
 
             $user = $entityManager->getRepository(User::class)->findOneBy(['email' => $user->getEmail()]);
-
-            $emailVerifier->sendEmailConfirmation("auth.verify_email", $user, (new TemplatedEmail)
-                ->to(new Address($user->getEmail(), $user->getName()))
-                ->subject("Registration Confirmation to Track-Folio!")
-                ->htmlTemplate("auth/registration_email.html.twig")
-            );
+            $eventDispatcher->dispatch(new UserCreatedEvent($user));
 
             return $security->login($user, "json_login", "login");
         } catch (\Doctrine\DBAL\Exception $e) {
             return $this->json([
-                'message' => 'User already exists',
-            ], 400);
-
-        } catch (\Exception $e) {
-            return $this->json([
-                'message' => 'An error occurred while registering the user',
-            ], 500);
+                "violations" => [
+                    [
+                        "propertyPath" => "email",
+                        "title" => "The email {$user->getEmail()} is already in use by another account."
+                    ]
+                ]
+            ], Response::HTTP_BAD_REQUEST);
         }
+    }
+
+    #[Route("/login", name: "login", methods: ["POST"])]
+    public function login()
+    {
+        throw new \LogicException("This method should never be called directly. It is handled by the security system.");
     }
 }
